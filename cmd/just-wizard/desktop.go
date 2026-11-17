@@ -89,6 +89,62 @@ func (u *desktopUI) confirmRun(commands [][]string, finished func(error)) {
   dialog.ShowConfirm("Confirm side effects",strings.Join(warnings,"\n"),func(ok bool){if ok{u.run(commands,finished)}},u.win)
  }else{u.run(commands,finished)}
 }
+// recipeIcon assigns a semantic icon to common recipe names and prefixes.
+// Module-qualified recipes use the final component (e.g. web::build).
+func recipeIcon(name string) fyne.Resource {
+ name = strings.ToLower(name)
+ if i := strings.LastIndex(name, "::"); i >= 0 { name = name[i+2:] }
+ name = strings.ReplaceAll(name, "_", "-")
+ matches := func(words ...string) bool {
+  for _, word := range words {
+   if name == word || strings.HasPrefix(name, word+"-") { return true }
+  }
+  return false
+ }
+ switch {
+ case matches("wizard-terminal", "terminal", "shell", "console", "cli"):
+  return sidebarSymbol("terminal", `<path d="M3 4h18v16H3z M6 8l4 4-4 4m7 0h5"/>`)
+ case matches("bootstrap", "setup", "init", "deps", "requirements"):
+  return sidebarSymbol("package", `<path d="M12 3l9 5v8l-9 5-9-5V8z M3 8l9 5 9-5m-9 5v8M7.5 5.5l9 5"/>`)
+ case matches("build", "compile", "make"):
+  return sidebarSymbol("build", `<path d="M14 5l5 5m-2-7 4 4-5 5-2-2-9 9-2-2 9-9-2-2 3-3z"/>`)
+ case matches("test", "spec", "pytest"):
+  return sidebarSymbol("test", `<path d="M9 3h6m-5 0v7l-5 8a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-8V3M8 15h8"/>`)
+ case matches("ci", "check", "verify", "validate", "lint", "audit"):
+  return sidebarSymbol("check", `<path d="M8 4H5v17h14V4h-3M8 3h8v4H8z M8 14l3 3 5-6"/>`)
+ case matches("doctor", "health", "status"):
+  return sidebarSymbol("health", `<path d="M3 12h4l3-7 4 14 3-7h4"/>`)
+ case matches("clean", "delete", "remove", "prune", "uninstall"):
+  return sidebarSymbol("trash", `<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>`)
+ case matches("install", "download", "pull", "fetch"):
+  return sidebarSymbol("download", `<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>`)
+ case matches("deploy", "publish", "release", "push", "upload"):
+  return sidebarSymbol("upload", `<path d="M12 16V4m-5 5 5-5 5 5M4 16v5h16v-5"/>`)
+ case matches("version", "tag"):
+  return sidebarSymbol("tag", `<path d="M3 3h8l10 10-8 8L3 11z M7 7h.1"/>`)
+ case matches("wizard", "gui", "desktop", "preview", "show", "serve"):
+  return sidebarSymbol("monitor", `<path d="M3 4h18v13H3z M12 17v4m-5 0h10"/>`)
+ case matches("default", "help", "list"):
+  return sidebarSymbol("list", `<path d="M8 6h13M8 12h13M8 18h13M3 6h.1M3 12h.1M3 18h.1"/>`)
+ case matches("config", "configure", "settings", "set"):
+  return theme.SettingsIcon()
+ case matches("stop", "cancel"):
+  return theme.MediaStopIcon()
+ case matches("restart", "refresh", "update"):
+  return theme.ViewRefreshIcon()
+ case matches("package", "export", "backup"):
+  return sidebarSymbol("archive", `<path d="M3 3h18v5H3z M5 8v13h14V8M9 12h6"/>`)
+ default:
+  return theme.MediaPlayIcon()
+ }
+}
+
+// Embedded outline icons follow Fyne's foreground and selected-button theme.
+func sidebarSymbol(name, shape string) fyne.Resource {
+ svg := `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">` + shape + `</svg>`
+ return theme.NewThemedResource(fyne.NewStaticResource("recipe-"+name+".svg", []byte(svg)))
+}
+
 // Sidebar navigation: flat, icon-led rows with independently expandable groups.
 func (u *desktopUI) navigation() fyne.CanvasObject {
  rows := container.NewVBox()
@@ -133,7 +189,7 @@ func (u *desktopUI) navigation() fyne.CanvasObject {
    for _, item := range list {
     r := item
     id := g + "\x00" + r.Name
-    rows.Add(makeRow(r.Name, theme.MediaPlayIcon(), selected == id, true, func() {
+    rows.Add(makeRow(r.Name, recipeIcon(r.Name), selected == id, true, func() {
      selected = id
      u.commandDetail(r)
      redraw()
