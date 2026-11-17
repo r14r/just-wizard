@@ -89,42 +89,66 @@ func (u *desktopUI) confirmRun(commands [][]string, finished func(error)) {
   dialog.ShowConfirm("Confirm side effects",strings.Join(warnings,"\n"),func(ok bool){if ok{u.run(commands,finished)}},u.win)
  }else{u.run(commands,finished)}
 }
-// Sidebar tree: root topics and their individual recipe titles.
+// Sidebar navigation: flat, icon-led rows with independently expandable groups.
 func (u *desktopUI) navigation() fyne.CanvasObject {
- children:=map[string][]string{"": {}}
- commands:=map[string]recipe{}
- for _,g:=range recipeGroups(u.recipes) {
-  children[""]=append(children[""],g)
-  children[g]=[]string{}
-  var list []recipe
-  for _,r:=range u.recipes {if r.Group==g{list=append(list,r)}}
-  sort.Slice(list,func(i,j int)bool{return list[i].Name<list[j].Name})
-  for _,r:=range list {id:=g+"/"+r.Name;children[g]=append(children[g],id);commands[id]=r}
+ rows := container.NewVBox()
+ expanded := map[string]bool{}
+ selected := ""
+ groups := recipeGroups(u.recipes)
+ var redraw func()
+ // Low-importance buttons retain native hover, keyboard focus and click handling.
+ // The active recipe uses the theme's primary color.
+ makeRow := func(label string, icon fyne.Resource, active bool, indent bool, action func()) fyne.CanvasObject {
+  button := widget.NewButtonWithIcon(label, icon, action)
+  button.Alignment = widget.ButtonAlignLeading
+  button.Importance = widget.LowImportance
+  if active { button.Importance = widget.HighImportance }
+  if !indent { return button }
+  space := canvas.NewRectangle(color.Transparent)
+  space.SetMinSize(fyne.NewSize(24, 1))
+  return container.NewBorder(nil, nil, space, nil, button)
  }
- tree:=widget.NewTree(
-  func(id string)[]string{return children[id]},
-  func(id string)bool{_,ok:=children[id];return ok},
-  func(branch bool)fyne.CanvasObject{return widget.NewLabel("")},
-  func(id string,branch bool,obj fyne.CanvasObject){
-   label:=obj.(*widget.Label)
-   label.Alignment=fyne.TextAlignLeading
-   label.TextStyle=fyne.TextStyle{Bold:branch}
-   if r,ok:=commands[id];ok{label.SetText(r.Name)}else{label.SetText(id)}
-  },
- )
- // Accordion navigation: opening a topic closes every other topic.
- // The branch callback covers both the disclosure arrow and topic selection.
- tree.OnBranchOpened=func(id string){
-  if id==""{return}
-  for _,other:=range children[""]{
-   if other!=id&&tree.IsBranch(other)&&tree.IsBranchOpen(other){tree.CloseBranch(other)}
+ groupIcon := func(group string) fyne.Resource {
+  switch strings.ToLower(group) {
+  case "development", "build": return theme.SettingsIcon()
+  case "application", "run": return theme.MediaPlayIcon()
+  default: return theme.FolderIcon()
   }
  }
- tree.OnSelected=func(id string){
-  if r,ok:=commands[id];ok{u.commandDetail(r);return}
-  if tree.IsBranchOpen(id){tree.CloseBranch(id)}else{tree.OpenBranch(id)}
+ redraw = func() {
+  rows.Objects = nil
+  for _, group := range groups {
+   g := group
+   var list []recipe
+   for _, r := range u.recipes { if r.Group == g { list = append(list, r) } }
+   sort.Slice(list, func(i,j int) bool { return list[i].Name < list[j].Name })
+   toggle := func() { expanded[g] = !expanded[g]; redraw() }
+   arrow := theme.NavigateNextIcon()
+   if expanded[g] { arrow = theme.MoveDownIcon() }
+   disclosure := widget.NewButtonWithIcon("", arrow, toggle)
+   disclosure.Importance = widget.LowImportance
+   title := makeRow(g, groupIcon(g), false, false, toggle)
+   rows.Add(container.NewBorder(nil, nil, nil, disclosure, title))
+   if !expanded[g] { continue }
+   for _, item := range list {
+    r := item
+    id := g + "\x00" + r.Name
+    rows.Add(makeRow(r.Name, theme.MediaPlayIcon(), selected == id, true, func() {
+     selected = id
+     u.commandDetail(r)
+     redraw()
+    }))
+   }
+  }
+  rows.Refresh()
  }
- return tree
+ if len(groups) > 0 { expanded[groups[0]] = true }
+ redraw()
+ border := canvas.NewRectangle(color.Transparent)
+ border.StrokeColor = theme.DisabledColor()
+ border.StrokeWidth = 1
+ border.CornerRadius = 12
+ return container.NewStack(border, container.NewPadded(container.NewVScroll(rows)))
 }
 
 func (u *desktopUI) commandDetail(r recipe) {
