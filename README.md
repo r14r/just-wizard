@@ -7,27 +7,32 @@ Standalone Go/Fyne desktop frontend for Just. Extracted from the Advent applicat
 Install Go 1.23+, Just with JSON dump support, and Fyne's native CGO toolchain. On macOS run `xcode-select --install`. On Debian/Ubuntu install gcc, libgl1-mesa-dev and xorg-dev.
 
 ```sh
-go mod tidy
-just test
+just
+just doctor
+just ci
 just test-desktop
 just build
 ./dist/just-wizard --root /path/to/project
 ```
 
-After `just install`, run `just-wizard` from any project directory (ensure GOBIN is on PATH). Use `--justfile path` for a custom filename. `just terminal` launches the non-graphical variant.
+After `just install`, run `just-wizard` from any project directory (installed at /usr/local/bin/just-wizard). Use `--justfile path` for a custom filename. `just terminal` launches the non-graphical variant.
+
+## Project commands
+
+Run `just` to list all recipes. `just version` prints VERSION; `just bootstrap` downloads Go modules; `just ci` validates the justfile and runs Go vet and tests. `just ci-desktop` also tests and builds the native GUI. `just build-terminal` creates the terminal executable, `just install-terminal` installs it alongside the desktop binary, and `just clean` removes local build output.
 
 ## Dynamic navigation
 
 At startup the application finds justfile, Justfile or .justfile in the selected directory and reads the compiled JSON dump using Just itself. It does not execute recipes to build the menu.
 
 ```just
-[group('Development')]
 # Run all tests.
+[group('Development')]
 test:
     go test ./...
 
-[group('Publishing')]
 # Build one edition.
+[group('Publishing')]
 build-book book layout="advent":
     echo "{{book}} {{layout}}"
 ```
