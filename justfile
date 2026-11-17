@@ -25,7 +25,8 @@ wizard root=".":
 terminal root=".":
     go run ./cmd/just-wizard --root "{{root}}"
 
-# Install the native executable into GOBIN or GOPATH/bin.
+# Install the native executable into /usr/local/bin.
 [group('Application')]
-install:
-    go install -tags desktop ./cmd/just-wizard
+install: build
+    sudo mkdir -p /usr/local/bin
+    sudo install -m 0755 dist/just-wizard /usr/local/bin/just-wizard
