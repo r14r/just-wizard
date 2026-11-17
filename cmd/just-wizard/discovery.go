@@ -27,7 +27,7 @@ func(p parameter) hint()string{
  if p.Flag{s="true to enable; blank to omit"}
  if p.Help!=""{s=p.Help+" · "+s};if p.UI.Description!=""{s=p.UI.Description+" · "+s};if len(p.UI.Options)>0{s+="; allowed: "+strings.Join(p.UI.Options,", ")};return s
 }
-type recipe struct{Name string; Description string; Group string; Params []parameter; Label string; Confirm bool}
+type recipe struct{Name string; Description string; Group string; Params []parameter; Label string; Confirm bool; Icon string}
 type rawRecipe struct{
  Doc string `json:"doc"`
  Private bool `json:"private"`

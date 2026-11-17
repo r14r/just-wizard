@@ -20,7 +20,7 @@ type uiParam struct {
  Options []string
 }
 type uiMetadata struct {
- Group, Label, Description string
+ Group, Label, Description, Icon string
  Confirm bool
  Params map[string]uiParam
 }
@@ -54,6 +54,7 @@ func sourceRecipes(lines []string) map[string]sourceRecipe {
     switch key {
     case "group":md.Group=value
     case "label":md.Label=value
+    case "icon":md.Icon=value
     case "description":md.Description=value
     case "confirm":md.Confirm=true
     case "param":
@@ -85,7 +86,7 @@ func applyMetadata(rs []recipe, data []byte) []recipe {
  src:=sourceRecipes(strings.Split(string(data),"\n"))
  for i:=range rs {
   r:=&rs[i]; s,ok:=src[r.Name];if !ok{continue};m:=s.meta
-  if m.Group!=""{r.Group=m.Group};r.Label=m.Label
+  if m.Group!=""{r.Group=m.Group};r.Label=m.Label;r.Icon=m.Icon
   if m.Description!=""{r.Description=m.Description};r.Confirm=m.Confirm
   r.Params=append([]parameter(nil),r.Params...)
   for j:=range r.Params{r.Params[j].UI=m.Params[r.Params[j].Name]}
@@ -144,7 +145,8 @@ func migrateSource(data []byte,rs []recipe)([]byte,int){
  for _,r:=range rs{
   s,ok:=src[r.Name];if !ok||seen[r.Name]{continue};seen[r.Name]=true;m:=s.meta
   var add []string
-  if m.Group==""{g:=r.Group;if g==""||g=="Ungrouped"{g=inferredGroup(r.Name)};add=append(add,"# @ui group "+g)}
+  g:=m.Group;if g==""{g=r.Group;if g==""||g=="Ungrouped"{g=inferredGroup(r.Name)};add=append(add,"# @ui group "+g)}
+  if m.Icon==""{r.Group=g;add=append(add,"# @ui icon "+r.iconID())}
   if m.Label==""{label:=strings.ReplaceAll(strings.ReplaceAll(r.Name,"-"," "),"_"," ");if len(label)>0{label=strings.ToUpper(label[:1])+label[1:]};add=append(add,"# @ui label "+label)}
   if m.Description==""{d:=r.Description;if d==""||strings.Contains(d,"@ui "){d="Run the "+r.Name+" recipe."};d=strings.Join(strings.Fields(d)," ");add=append(add,"# @ui description "+d)}
   if !m.Confirm&&risk(r.Name)!=""{add=append(add,"# @ui confirm")}
