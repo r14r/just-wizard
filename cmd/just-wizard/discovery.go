@@ -18,15 +18,16 @@ type parameter struct {
  Long string `json:"long"`
  Short string `json:"short"`
  Flag bool `json:"flag"`
+ UI uiParam `json:"-"`
 }
 func(p parameter) optional()bool{return p.Flag||p.Kind=="star"||(len(p.Default)>0&&string(p.Default)!="null")}
 func(p parameter) hint()string{
  s:="Required";if p.optional(){s="Optional — blank uses Just default"}
  if p.Kind=="plus"||p.Kind=="star"{s+="; space-separated values"}
  if p.Flag{s="true to enable; blank to omit"}
- if p.Help!=""{s=p.Help+" · "+s};return s
+ if p.Help!=""{s=p.Help+" · "+s};if p.UI.Description!=""{s=p.UI.Description+" · "+s};if len(p.UI.Options)>0{s+="; allowed: "+strings.Join(p.UI.Options,", ")};return s
 }
-type recipe struct{Name string; Description string; Group string; Params []parameter}
+type recipe struct{Name string; Description string; Group string; Params []parameter; Label string; Confirm bool}
 type rawRecipe struct{
  Doc string `json:"doc"`
  Private bool `json:"private"`
@@ -56,7 +57,7 @@ func decodeRecipes(data []byte)([]recipe,error){
   add:=func(name string,r rawRecipe,attrs []json.RawMessage,desc string){
    gs,priv:=attributes(attrs);if priv||strings.HasPrefix(name,"_"){return}
    if len(gs)==0{gs=[]string{"Ungrouped"}}
-   for _,g:=range gs{if prefix!=""{g=strings.TrimSuffix(prefix,"::")+" / "+g};result=append(result,recipe{prefix+name,desc,g,r.Parameters})}
+   for _,g:=range gs{if prefix!=""{g=strings.TrimSuffix(prefix,"::")+" / "+g};result=append(result,recipe{Name:prefix+name,Description:desc,Group:g,Params:r.Parameters})}
   }
   for name,r:=range f.Recipes{if !r.Private{add(name,r,r.Attributes,r.Doc)}}
   for name,a:=range f.Aliases{if r,ok:=f.Recipes[a.Target];ok{attrs:=a.Attributes;if gs,_:=attributes(attrs);len(gs)==0{attrs=append(append([]json.RawMessage{},attrs...),r.Attributes...)};add(name,r,attrs,"Alias for "+a.Target+" — "+r.Doc)}}
@@ -73,13 +74,13 @@ func loadProject(root,file string)(string,string,[]recipe,error){
  ctx,cancel:=context.WithTimeout(context.Background(),15*time.Second);defer cancel()
  cmd:=exec.CommandContext(ctx,"just","--justfile",file,"--working-directory",abs,"--dump","--dump-format","json");cmd.Dir=abs
  out,err:=cmd.Output();if err!=nil{if e,ok:=err.(*exec.ExitError);ok{return "","",nil,fmt.Errorf("Just discovery: %s",e.Stderr)};return "","",nil,err}
- rs,err:=decodeRecipes(out);return abs,file,rs,err
+ rs,err:=decodeRecipes(out);if err!=nil{return abs,file,nil,err};data,err:=os.ReadFile(file);if err!=nil{return abs,file,nil,err};return abs,file,applyMetadata(rs,data),nil
 }
 func recipeArgs(r recipe,values []string)([]string,error){
  if len(values)!=len(r.Params){return nil,fmt.Errorf("parameter count mismatch")}
  args:=[]string{r.Name};omitted:=false
  for i,p:=range r.Params{
-  v:=values[i];option:="";if p.Long!=""{option="--"+p.Long}else if p.Short!=""{option="-"+p.Short}
+  v:=values[i];if v==""&&p.UI.HasDefault{v=p.UI.Default};if err:=p.validate(v);err!=nil{return nil,err};option:="";if p.Long!=""{option="--"+p.Long}else if p.Short!=""{option="-"+p.Short}
   if p.Flag{if v=="true"&&option!=""{args=append(args,option)}else if v!=""&&v!="false"{return nil,fmt.Errorf("%s: enter true or false",p.Name)};continue}
   if v==""{if !p.optional(){return nil,fmt.Errorf("%s is required",p.Name)};if option==""{omitted=true};continue}
   if option!=""{args=append(args,option,v);continue}

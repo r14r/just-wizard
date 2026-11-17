@@ -73,3 +73,7 @@ install-terminal: build-terminal
 # Remove generated local binaries only.
 clean:
     rm -rf dist
+
+# Add missing UI metadata to the selected project Justfile.
+migrate root=".": build-terminal
+    ./dist/just-wizard-terminal migrate --root {{quote(root)}}

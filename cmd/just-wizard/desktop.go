@@ -62,7 +62,7 @@ func (u *desktopUI) run(commands [][]string, finished func(error)) {
   var output strings.Builder
   for _,args:=range commands {
    if ctx.Err()!=nil {result=ctx.Err();break}
-   output.WriteString(commandPreview(args)+"\n")
+   display:=commandPreview(args);for _,r:=range u.recipes{if len(args)>0&&r.Name==args[0]{display=safePreview(r,args);break}};output.WriteString(display+"\n")
    snapshot:=output.String()
    fyne.Do(func(){u.setOutput(snapshot)})
    cmd:=exec.CommandContext(ctx,"just",append([]string{"--justfile",u.justfile,"--working-directory",u.root,"--"},args...)...)
@@ -189,7 +189,7 @@ func (u *desktopUI) navigation() fyne.CanvasObject {
    for _, item := range list {
     r := item
     id := g + "\x00" + r.Name
-    rows.Add(makeRow(r.Name, recipeIcon(r.Name), selected == id, true, func() {
+    rows.Add(makeRow(r.title(), recipeIcon(r.Name), selected == id, true, func() {
      selected = id
      u.commandDetail(r)
      redraw()
@@ -211,22 +211,39 @@ func (u *desktopUI) commandDetail(r recipe) {
  description:=r.Description
  if description=="" {description="Execute the "+r.Name+" recipe from the project Justfile."}
  desc:=widget.NewLabel(description);desc.Wrapping=fyne.TextWrapWord
- fields:=make([]*widget.Entry,len(r.Params))
- items:=make([]*widget.FormItem,0,len(fields))
- for i,p:=range r.Params {
-  e:=widget.NewEntry()
-  
-  e.SetPlaceHolder(p.hint())
-  fields[i]=e;items=append(items,widget.NewFormItem(p.Name,e))
+ type formField struct{value func()string;reset func()}
+ fields:=make([]formField,0,len(r.Params))
+ items:=make([]*widget.FormItem,0,len(r.Params))
+ var update func()
+ changed:=func(){if update!=nil{update()}}
+ for _,p:=range r.Params {
+  p:=p
+  initial:=p.initial()
+  var obj fyne.CanvasObject
+  var field formField
+  switch {
+  case len(p.UI.Options)>0:
+   sel:=widget.NewSelect(p.UI.Options,func(string){changed()})
+   sel.SetSelected(initial)
+   obj=sel;field=formField{func()string{return sel.Selected},func(){sel.ClearSelected();sel.SetSelected(initial)}}
+  case p.UI.Type=="checkbox"||p.Flag:
+   check:=widget.NewCheck("",func(bool){changed()});check.SetChecked(initial=="true")
+   obj=check;field=formField{func()string{if check.Checked{return "true"};return "false"},func(){check.SetChecked(initial=="true")}}
+  default:
+   e:=widget.NewEntry();if p.UI.Type=="password"{e=widget.NewPasswordEntry()}
+   e.SetPlaceHolder(p.hint());e.SetText(initial);e.OnChanged=func(string){changed()}
+   obj=e;field=formField{func()string{return e.Text},func(){e.SetText(initial)}}
+  }
+  if p.UI.Description!=""{note:=widget.NewLabel(p.UI.Description);note.Wrapping=fyne.TextWrapWord;obj=container.NewVBox(obj,note)}
+  fields=append(fields,field);items=append(items,widget.NewFormItem(p.label(),obj))
  }
  args:=func()([]string,error){
   values:=make([]string,len(fields))
-  for i,e:=range fields{values[i]=e.Text}
+  for i,f:=range fields{values[i]=f.value()}
   return recipeArgs(r,values)
  }
  preview:=widget.NewLabel("");preview.TextStyle=fyne.TextStyle{Monospace:true};preview.Wrapping=fyne.TextWrapWord
- update:=func(){a,err:=args();if err!=nil{preview.SetText(err.Error());return};preview.SetText(commandPreview(a))}
- for _,e:=range fields{e.OnChanged=func(string){update()}}
+ update=func(){a,err:=args();if err!=nil{preview.SetText(err.Error());return};preview.SetText(safePreview(r,a))}
  update()
  var parameters fyne.CanvasObject=widget.NewLabel("No parameters required.")
  if len(items)>0 {parameters=widget.NewForm(items...)}
@@ -235,11 +252,11 @@ func (u *desktopUI) commandDetail(r recipe) {
   container.NewVBox(heading("Parameters:")),parameters,
   container.NewVBox(heading("Command:")),preview,
  )
- content:=container.NewVBox(heading(r.Group+" / "+r.Name),widget.NewSeparator(),details,widget.NewSeparator())
+ content:=container.NewVBox(heading(r.Group+" / "+r.title()),widget.NewSeparator(),details,widget.NewSeparator())
  if reason:=risk(r.Name);reason!=""{warning:=widget.NewLabel("Warning: "+reason);warning.Wrapping=fyne.TextWrapWord;content.Add(warning)}
- run:=widget.NewButtonWithIcon("Run",theme.MediaPlayIcon(),func(){if u.guard(){a,err:=args();if err!=nil{dialog.ShowError(err,u.win);return};u.confirmRun([][]string{a},nil)}})
+ run:=widget.NewButtonWithIcon("Run",theme.MediaPlayIcon(),func(){if u.guard(){a,err:=args();if err!=nil{dialog.ShowError(err,u.win);return};if r.Confirm&&risk(r.Name)==""{dialog.ShowConfirm("Confirm recipe","Run "+r.title()+"?",func(ok bool){if ok{u.confirmRun([][]string{a},nil)}},u.win)}else{u.confirmRun([][]string{a},nil)}}})
  run.Importance=widget.HighImportance
- content.Add(container.NewHBox(run,widget.NewButton("Reset parameters",func(){for _,e:=range fields{e.SetText("")};update()})))
+ content.Add(container.NewHBox(run,widget.NewButton("Reset parameters",func(){for _,f:=range fields{f.reset()};update()})))
  u.show(container.NewVScroll(container.NewPadded(content)))
 }
 
@@ -257,6 +274,7 @@ func (u *desktopUI) setOutput(s string){
  if u.logScroll!=nil{u.logScroll.Refresh();u.logScroll.ScrollToBottom()}
 }
 func main(){
+ if dispatchMigration(){return}
  root:=flag.String("root",".","project directory")
  file:=flag.String("justfile","","explicit justfile (relative to root or absolute)")
  flag.Parse()

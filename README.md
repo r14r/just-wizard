@@ -44,3 +44,9 @@ EXPLORER replaces the sidebar with a project file tree. It retains text editing,
 The original Advent repository remains unchanged. Its specific book-management and Getting Started workflows are not part of this general-purpose app; define project-specific workflows as Just recipes.
 
 See [technical notes](docs/ARCHITECTURE.md). Native compilation and UI verification are required.
+
+## Rich UI metadata and migration
+
+Run `just-wizard migrate --dry-run` to preview annotations, then `just-wizard migrate` to add missing annotations to the current Justfile. Use `--root` or `--justfile` for another project. Migration validates the proposed file with Just, preserves recipe bodies, and writes a `.bak` backup before replacing the file. Move an existing backup before another write. Existing annotations are preserved; automatic type/group inference is conservative and never invents dropdown options or numeric bounds. Only simple root-level recipe headers are annotated; modules and imported recipes remain discoverable through Just's JSON dump.
+
+Supported comments match just-ui: `@ui group`, `@ui label`, `@ui description`, `@ui confirm`, and `@ui param NAME type=select options=a|b default=a label=Display_name description=Help_text`. Also supported: text, password, number (`min`/`max`), path (text input), checkbox, and `required`. Explicit UI groups override native groups. Just remains authoritative for executable signatures. Password previews hide arguments; recipe output may still expose secrets, and terminal input is not masked. Restart the UI after changing metadata.
