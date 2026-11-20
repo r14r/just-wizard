@@ -19,7 +19,7 @@ After `just install`, run `just-wizard` from any project directory (installed at
 
 ## Project commands
 
-Run `just` to list all recipes. `just version` prints VERSION; `just bootstrap` downloads Go modules; `just ci` validates the justfile and runs Go vet and tests. `just ci-desktop` also tests and builds the native GUI. `just build-terminal` creates the terminal executable, `just install-terminal` installs it alongside the desktop binary, and `just clean` removes local build output.
+Run `just` to list all recipes. `just version` prints VERSION; `just bootstrap` resolves Go modules and updates `go.sum` using `go mod tidy`; `just ci` validates the justfile and runs Go vet and tests. `just ci-desktop` also tests and builds the native GUI. `just build-terminal` creates the terminal executable, `just install-terminal` installs it alongside the desktop binary, and `just clean` removes local build output.
 
 ## Dynamic navigation
 
@@ -58,3 +58,7 @@ Use `# @ui icon hammer` to override the icon of a recipe. Supported IDs: `termin
 ## CLI options reference
 
 Use `just-wizard options` to list supported `@ui` annotations, parameter types and attributes, all icon IDs, and a copyable Justfile example. `just-wizard options --example` prints just the example; `just-wizard options --icons` lists icon IDs. These commands do not require a Justfile or start the UI, and work in both desktop and terminal builds.
+
+### Go dependency checksums
+
+The repository requires a `go.sum` file for reproducible desktop builds. If it is missing, run `just bootstrap` (or `go mod tidy`) before building, then commit the generated `go.sum` alongside `go.mod`. `just build` runs `bootstrap` automatically.
