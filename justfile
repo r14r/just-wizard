@@ -8,9 +8,9 @@ default:
 version:
     @cat VERSION
 
-# Download Go module dependencies.
+# Resolve Go module dependencies and create missing go.sum checksums.
 bootstrap:
-    go mod download
+    go mod tidy
 
 # Check the Go and Just toolchain.
 doctor:
