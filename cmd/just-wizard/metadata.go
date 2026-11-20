@@ -162,7 +162,9 @@ func migrateSource(data []byte,rs []recipe)([]byte,int){
 }
 // Both desktop and terminal binaries dispatch migrate before launching their UI.
 func dispatchMigration()bool{
- if len(os.Args)<2||os.Args[1]!="migrate"{return false}
+ if len(os.Args)<2{return false}
+ if os.Args[1]=="options"{if err:=runOptions(os.Args[2:]);err!=nil{fmt.Fprintln(os.Stderr,"options:",err);os.Exit(1)};return true}
+ if os.Args[1]!="migrate"{return false}
  if err:=runMigration(os.Args[2:]);err!=nil{fmt.Fprintln(os.Stderr,"migrate:",err);os.Exit(1)}
  return true
 }
