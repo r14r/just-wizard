@@ -54,3 +54,7 @@ Supported comments match just-ui: `@ui group`, `@ui label`, `@ui description`, `
 ### Recipe icons
 
 Use `# @ui icon hammer` to override the icon of a recipe. Supported IDs: `terminal`, `package`, `hammer`, `flask-conical`, `clipboard-check`, `activity`, `trash-2`, `download`, `upload`, `tag`, `monitor`, `list`, `settings`, `square`, `refresh-cw`, `archive`, `play`. Migration adds a missing icon using the recognized command name/prefix first, then the effective group, or `play` as fallback. Existing icon annotations are preserved; unsupported values fall back to automatic recognition. Both binaries share the inference logic. No changes to recipe signatures or execution are required.
+
+## CLI options reference
+
+Use `just-wizard options` to list supported `@ui` annotations, parameter types and attributes, all icon IDs, and a copyable Justfile example. `just-wizard options --example` prints just the example; `just-wizard options --icons` lists icon IDs. These commands do not require a Justfile or start the UI, and work in both desktop and terminal builds.
