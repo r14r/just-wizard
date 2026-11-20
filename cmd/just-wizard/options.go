@@ -40,7 +40,7 @@ Usage:
 const optionsExample = `# @ui group Development
 # @ui icon flask-conical
 # @ui label Run tests
-# @ui description Run_the_selected_test_suite
+# @ui description Run the selected test suite
 # @ui param suite type=select options=all|unit|integration default=all label=Test_suite description=Choose_the_test_suite
 test suite="all":
     echo "Testing {{suite}}"
@@ -48,7 +48,7 @@ test suite="all":
 # @ui group Build
 # @ui icon hammer
 # @ui label Build application
-# @ui description Build_for_a_selected_platform
+# @ui description Build for a selected platform
 # @ui param target type=select options=linux|darwin|windows default=linux label=Target_platform
 build target="linux":
     echo "Building for {{target}}"
@@ -56,7 +56,7 @@ build target="linux":
 # @ui group Maintenance
 # @ui icon trash-2
 # @ui label Clean generated files
-# @ui description=Remove_generated_build_files
+# @ui description Remove generated build files
 # @ui confirm
 clean:
     echo "Cleaning build files"
