@@ -9,7 +9,7 @@ set shell := ["bash", "-cu"]
 # @ui label Show example commands
 # @ui description List available examples and their parameters.
 default:
-    @just --justfile examples/justfile --list
+    @just --list
 
 # A dynamic options-* recipe prints one value per line.
 # This recipe can also be executed directly to inspect available book IDs.
