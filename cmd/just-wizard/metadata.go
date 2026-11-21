@@ -10,15 +10,17 @@ import (
  "os/exec"
  "path/filepath"
  "regexp"
+ "sort"
  "strconv"
  "strings"
 )
 
 type uiParam struct {
- Label, Description, Type, Default, Min, Max string
+ Label, Description, Type, Default, Min, Max, Source, FlagName string
  HasDefault, Required bool
  Options []string
 }
+var validUIFlag=regexp.MustCompile(`^--[a-z][a-z0-9-]*$`)
 type uiMetadata struct {
  Group, Label, Description, Icon string
  Confirm bool
@@ -71,6 +73,8 @@ func sourceRecipes(lines []string) map[string]sourceRecipe {
       case "min":a.Min=v
       case "max":a.Max=v
       case "options":a.Options=strings.Split(v,"|")
+      case "source":a.Source=v
+      case "flag":a.FlagName=v
       }
      }
      md.Params[tokens[0]]=a
@@ -90,6 +94,18 @@ func applyMetadata(rs []recipe, data []byte) []recipe {
   if m.Description!=""{r.Description=m.Description};r.Confirm=m.Confirm
   r.Params=append([]parameter(nil),r.Params...)
   for j:=range r.Params{r.Params[j].UI=m.Params[r.Params[j].Name]}
+  // UI-only selectors are supported only by recipes with a variadic *options
+  // parameter. They are translated into explicit CLI flags when executed.
+  variadic:=false;existing:=map[string]bool{}
+  for _,p:=range r.Params{existing[p.Name]=true;if p.Kind=="star"{variadic=true}}
+  if variadic{
+   names:=[]string{}
+   for name,ui:=range m.Params{
+    if !existing[name]&&ui.FlagName!=""&&validUIFlag.MatchString(ui.FlagName){names=append(names,name)}
+   }
+   sort.Strings(names)
+   for _,name:=range names{r.Params=append(r.Params,parameter{Name:name,UI:m.Params[name],UIOnly:true})}
+  }
  }
  // Recipes with multiple native groups collapse when explicit metadata overrides them.
  seen:=map[string]bool{};out:=rs[:0]

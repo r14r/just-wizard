@@ -19,8 +19,9 @@ type parameter struct {
  Short string `json:"short"`
  Flag bool `json:"flag"`
  UI uiParam `json:"-"`
+ UIOnly bool `json:"-"`
 }
-func(p parameter) optional()bool{return p.Flag||p.Kind=="star"||(len(p.Default)>0&&string(p.Default)!="null")}
+func(p parameter) optional()bool{return p.UIOnly||p.Flag||p.Kind=="star"||(len(p.Default)>0&&string(p.Default)!="null")}
 func(p parameter) hint()string{
  s:="Required";if p.optional(){s="Optional — blank uses Just default"}
  if p.Kind=="plus"||p.Kind=="star"{s+="; space-separated values"}
@@ -81,6 +82,13 @@ func recipeArgs(r recipe,values []string)([]string,error){
  args:=[]string{r.Name};omitted:=false
  for i,p:=range r.Params{
   v:=values[i];if v==""&&p.UI.HasDefault{v=p.UI.Default};if err:=p.validate(v);err!=nil{return nil,err};option:="";if p.Long!=""{option="--"+p.Long}else if p.Short!=""{option="-"+p.Short}
+  if p.UIOnly {
+   if v!=""{
+    if !validUIFlag.MatchString(p.UI.FlagName){return nil,fmt.Errorf("%s: invalid CLI flag",p.Name)}
+    args=append(args,p.UI.FlagName+"="+v)
+   }
+   continue
+  }
   if p.Flag{if v=="true"&&option!=""{args=append(args,option)}else if v!=""&&v!="false"{return nil,fmt.Errorf("%s: enter true or false",p.Name)};continue}
   if v==""{if !p.optional(){return nil,fmt.Errorf("%s is required",p.Name)};if option==""{omitted=true};continue}
   if option!=""{args=append(args,option,v);continue}
