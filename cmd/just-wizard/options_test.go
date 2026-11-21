@@ -20,6 +20,13 @@ func TestOptionsExampleAndIcons(t *testing.T){
  printOptions(&b,false,true)
  if !strings.Contains(b.String(),"flask-conical")||strings.Contains(b.String(),"Example Justfile:"){t.Fatal("unexpected icon output")}
 }
+func TestDynamicOptionsDocumented(t *testing.T) {
+ var b bytes.Buffer
+ printOptions(&b,false,false)
+ for _,s:=range []string{"source=options-NAME","flag=--NAME","options-environments:","type=select source=options-environments"} {
+  if !strings.Contains(b.String(),s){t.Errorf("missing dynamic selector documentation: %s",s)}
+ }
+}
 func TestOptionsRejectInvalidArgs(t *testing.T){
  for _,args:=range [][]string{{"--example","--icons"},{"unexpected"}} {
   if err:=runOptions(args);err==nil {t.Errorf("expected error for %v",args)}

@@ -66,3 +66,45 @@ The repository requires a `go.sum` file for reproducible desktop builds. If it i
 ## Executable version
 
 `just-wizard version` and `just-wizard --version` are aliases and print the version embedded during `just build` or `just build-terminal`, for example `just-wizard 0.1.2`. Both work without a project Justfile or desktop UI. Developer binaries built without the project's Just recipes report `dev` unless the same version linker flag is provided.
+
+
+### Dynamic selector values
+
+In addition to static `options=a|b|c`, a select parameter can use
+`source=options-<name>` to populate values by running a **project-defined**
+Just recipe when its form opens:
+
+```just
+options-books-by-nr:
+    @printf '%s\\n' 1 2 3
+
+# @ui param book type=select label=Book source=options-books-by-nr
+build-book book:
+    @echo "{{book}}"
+```
+
+Dynamic source recipes must be named `options-*`, present in the discovered
+Justfile and return one value per line. The wizard executes the source
+without a shell, using the selected `--justfile` and project working
+directory, with an eight-second timeout, bounded output and deduplication.
+Invalid/empty output and execution failures are displayed as errors.
+Only use trusted project Justfiles: a source is an executable recipe.
+
+For `*options` recipes, parameters not defined by Just may be declared
+as UI-only selectors with an explicit `flag=--...` mapping:
+
+```just
+options-engines:
+    @printf '%s\\n' local stable-diffusion huggingface
+
+# @ui param book type=select source=options-books-by-nr
+# @ui param selected_engine type=select label=Engine source=options-engines flag=--engine
+[positional-arguments]
+regenerate-images-book book *options:
+    @echo "$1 ${@:2}"
+```
+
+Selecting book `26` and engine `local` executes
+`just regenerate-images-book 26 --engine=local`. Static `options=` and
+existing input types remain supported. UI-only parameters require an explicit
+flag and a star-variadic Just parameter. Use `just-wizard options` for details.

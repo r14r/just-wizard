@@ -198,6 +198,12 @@ func (u *desktopUI) navigation() fyne.CanvasObject {
 }
 
 func (u *desktopUI) commandDetail(r recipe) {
+ resolved,err:=resolveParameterSources(r,u.root,u.justfile,u.recipes)
+ if err!=nil{
+  u.show(container.NewVBox(heading(r.title()),widget.NewLabel("Parameter source error: "+err.Error()),widget.NewButton("Retry",func(){u.commandDetail(r)})))
+  return
+ }
+ r=resolved
  description:=r.Description
  if description=="" {description="Execute the "+r.Name+" recipe from the project Justfile."}
  desc:=widget.NewLabel(description);desc.Wrapping=fyne.TextWrapWord

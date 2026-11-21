@@ -25,7 +25,9 @@ Parameter attributes:
   description=TEXT               Help text (use underscores for spaces)
   default=VALUE                  Initial value
   required                       Value must not be empty
-  options=a|b|c                  Choices for select
+  options=a|b|c                  Fixed choices for select
+  source=options-NAME            Run a Just options-* recipe for choices
+  flag=--NAME                    Map a UI-only selector to a *options flag
   min=NUMBER                     Minimum numeric value
   max=NUMBER                     Maximum numeric value
 
@@ -37,7 +39,24 @@ Usage:
   just-wizard migrate            Annotate the current Justfile
 `
 
-const optionsExample = `# @ui group Development
+const optionsExample = `# @ui group Information
+# @ui label Available environments
+options-environments:
+    @printf '%s\n' development staging production
+
+# @ui group Build
+# @ui label Deploy target
+# @ui param environment type=select source=options-environments default=development
+deploy environment="development":
+    @echo "{{environment}}"
+
+# For recipes with *options, a UI-only selector can supply a flag:
+# @ui param selected_engine type=select source=options-environments flag=--engine
+[positional-arguments]
+generate book *options:
+    @echo "$1 ${@:2}"
+
+# @ui group Development
 # @ui icon flask-conical
 # @ui label Run tests
 # @ui description Run the selected test suite
