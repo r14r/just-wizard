@@ -163,7 +163,7 @@ func migrateSource(data []byte,rs []recipe)([]byte,int){
 // Both desktop and terminal binaries dispatch migrate before launching their UI.
 func dispatchMigration()bool{
  if len(os.Args)<2{return false}
- if os.Args[1]=="version"||os.Args[1]=="--version"{if len(os.Args)!=2{fmt.Fprintln(os.Stderr,"version: unexpected arguments");os.Exit(2)};fmt.Println("just-wizard",buildVersion);return true}
+ if os.Args[1]=="version"||os.Args[1]=="--version"{if len(os.Args)!=2{fmt.Fprintln(os.Stderr,"version: unexpected arguments");os.Exit(2)};fmt.Println(versionString());return true}
  if os.Args[1]=="options"{if err:=runOptions(os.Args[2:]);err!=nil{fmt.Fprintln(os.Stderr,"options:",err);os.Exit(1)};return true}
  if os.Args[1]!="migrate"{return false}
  if err:=runMigration(os.Args[2:]);err!=nil{fmt.Fprintln(os.Stderr,"migrate:",err);os.Exit(1)}
