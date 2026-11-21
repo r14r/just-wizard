@@ -108,3 +108,7 @@ Selecting book `26` and engine `local` executes
 `just regenerate-images-book 26 --engine=local`. Static `options=` and
 existing input types remain supported. UI-only parameters require an explicit
 flag and a star-variadic Just parameter. Use `just-wizard options` for details.
+
+## Runnable examples
+
+See [examples/justfile](examples/justfile) and [examples/README.md](examples/README.md) for static `options=` lists, dynamic `source=options-*` lists, and forwarding UI-only selections as CLI flags. Open with `just-wizard --root examples` or run `just --justfile examples/justfile options-books-by-nr` to inspect provider values.

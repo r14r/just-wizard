@@ -1,0 +1,73 @@
+# Just Wizard example: static and dynamic select options.
+# Run: just --justfile examples/justfile --list
+# UI:  just-wizard --root examples
+
+set shell := ["bash", "-cu"]
+
+# @ui group Information
+# @ui icon list
+# @ui label Show example commands
+# @ui description List available examples and their parameters.
+default:
+    @just --list
+
+# A dynamic options-* recipe prints one value per line.
+# This recipe can also be executed directly to inspect available book IDs.
+# @ui group Options
+# @ui icon list
+# @ui label Available book IDs
+# @ui description Provide the selectable book IDs for build-book and regenerate-images-book.
+options-books-by-nr:
+    @printf '%s\n' 1 2 26 42
+
+# @ui group Options
+# @ui icon list
+# @ui label Available image engines
+# @ui description Provide selectable image engines.
+options-engines:
+    @printf '%s\n' local stable-diffusion huggingface
+
+# @ui group Options
+# @ui icon list
+# @ui label Available build layouts
+# @ui description Provide selectable output layouts.
+options-layouts:
+    @printf '%s\n' advent modern classic
+
+# @ui group Books
+# @ui icon hammer
+# @ui label Build a book
+# @ui description Build the selected book using dynamically discovered book and layout choices.
+# @ui param book type=select source=options-books-by-nr default=26 label=Book_ID description=Choose_a_book_from_the_options_recipe required
+# @ui param layout type=select source=options-layouts default=advent label=Layout description=Choose_the_output_layout
+build-book book layout="advent":
+    @echo "Building book {{book}} with layout {{layout}}"
+
+# @ui group Images
+# @ui icon play
+# @ui label Regenerate book images
+# @ui description Use dynamic book choices and a UI-only engine passed as a CLI flag.
+# @ui param book type=select source=options-books-by-nr default=26 label=Book_ID required
+# @ui param selected_engine type=select source=options-engines default=local label=Engine flag=--engine
+[positional-arguments]
+regenerate-images-book book *options:
+    @printf 'Regenerating images for book %s\n' "$1"
+    @printf 'Additional CLI arguments:'
+    @printf ' %s' "${@:2}"
+    @printf '\n'
+
+# @ui group Development
+# @ui icon flask-conical
+# @ui label Run tests
+# @ui description Demonstrate a fixed options list.
+# @ui param suite type=select options=all|unit|integration default=all label=Test_suite
+test suite="all":
+    @echo "Running {{suite}} tests"
+
+# @ui group Publishing
+# @ui icon upload
+# @ui label Deploy to environment
+# @ui description Demonstrate a static environment selector.
+# @ui param environment type=select options=development|staging|production default=development label=Environment
+deploy environment="development":
+    @echo "Deploying to {{environment}}"
