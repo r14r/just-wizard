@@ -245,20 +245,26 @@ func (u *desktopUI) commandDetail(r recipe) {
  content:=container.NewVBox(heading(r.Group+" / "+r.title()),widget.NewSeparator(),details,widget.NewSeparator())
  if reason:=risk(r.Name);reason!=""{warning:=widget.NewLabel("Warning: "+reason);warning.Wrapping=fyne.TextWrapWord;content.Add(warning)}
  // Keep progress and result immediately beside Run, even for fast recipes.
+ // A radial activity wheel with its caption below, matching the Building indicator.
  progress:=widget.NewActivity()
- progress.Hide()
+ buildingLabel:=widget.NewLabelWithStyle("Building",fyne.TextAlignCenter,fyne.TextStyle{Bold:true})
+ building:=container.NewVBox(
+  container.NewCenter(container.NewGridWrap(fyne.NewSize(52,52),progress)),
+  buildingLabel,
+ )
+ building.Hide()
  result:=widget.NewLabel("")
  result.Hide()
  var run *widget.Button
  started:=func(){
   result.Hide()
-  progress.Show()
+  building.Show()
   progress.Start()
   run.Disable()
  }
  finished:=func(err error){
   progress.Stop()
-  progress.Hide()
+  building.Hide()
   run.Enable()
   if err!=nil {result.SetText("Failed: "+err.Error())} else {result.SetText("✓ OK — Completed")}
   result.Show()
@@ -273,7 +279,7 @@ func (u *desktopUI) commandDetail(r recipe) {
   }else{execute()}
  })
  run.Importance=widget.HighImportance
- content.Add(container.NewHBox(run,container.NewCenter(progress),result))
+ content.Add(container.NewHBox(run,building,result))
  u.show(container.NewVScroll(container.NewPadded(content)))
 }
 
