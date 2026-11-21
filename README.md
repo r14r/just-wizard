@@ -62,3 +62,7 @@ Use `just-wizard options` to list supported `@ui` annotations, parameter types a
 ### Go dependency checksums
 
 The repository requires a `go.sum` file for reproducible desktop builds. If it is missing, run `just bootstrap` (or `go mod tidy`) before building, then commit the generated `go.sum` alongside `go.mod`. `just build` runs `bootstrap` automatically.
+
+## Executable version
+
+`just-wizard version` and `just-wizard --version` are aliases and print the version embedded during `just build` or `just build-terminal`, for example `just-wizard 0.1.2`. Both work without a project Justfile or desktop UI. Developer binaries built without the project's Just recipes report `dev` unless the same version linker flag is provided.

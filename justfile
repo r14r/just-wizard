@@ -52,7 +52,7 @@ ci: bootstrap
 # Compile the native desktop application.
 build: bootstrap
     mkdir -p dist
-    go build -tags desktop -o dist/just-wizard ./cmd/just-wizard
+    go build -tags desktop -ldflags "-X main.buildVersion=$(cat VERSION)" -o dist/just-wizard ./cmd/just-wizard
 
 # @ui group Build
 # @ui icon hammer
@@ -61,7 +61,7 @@ build: bootstrap
 # Compile the terminal-only application.
 build-terminal: bootstrap
     mkdir -p dist
-    go build -o dist/just-wizard-terminal ./cmd/just-wizard
+    go build -ldflags "-X main.buildVersion=$(cat VERSION)" -o dist/just-wizard-terminal ./cmd/just-wizard
 
 # @ui group Development
 # @ui icon flask-conical
