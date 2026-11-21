@@ -82,12 +82,12 @@ func (u *desktopUI) run(commands [][]string, finished func(error)) {
   })
  }()
 }
-func (u *desktopUI) confirmRun(commands [][]string, finished func(error)) {
+func (u *desktopUI) confirmRun(commands [][]string, started func(), finished func(error)) {
  var warnings []string
  for _,args:=range commands {if len(args)>0 {if reason:=risk(args[0]);reason!=""{warnings=append(warnings,args[0]+": "+reason)}}}
  if len(warnings)>0 {
-  dialog.ShowConfirm("Confirm side effects",strings.Join(warnings,"\n"),func(ok bool){if ok{u.run(commands,finished)}},u.win)
- }else{u.run(commands,finished)}
+  dialog.ShowConfirm("Confirm side effects",strings.Join(warnings,"\n"),func(ok bool){if ok{if started!=nil{started()};u.run(commands,finished)}},u.win)
+ }else{if started!=nil{started()};u.run(commands,finished)}
 }
 // recipeIcon renders a canonical icon ID using existing themed resources.
 func recipeIcon(id string) fyne.Resource {
@@ -201,7 +201,7 @@ func (u *desktopUI) commandDetail(r recipe) {
  description:=r.Description
  if description=="" {description="Execute the "+r.Name+" recipe from the project Justfile."}
  desc:=widget.NewLabel(description);desc.Wrapping=fyne.TextWrapWord
- type formField struct{value func()string;reset func()}
+ type formField struct{value func()string}
  fields:=make([]formField,0,len(r.Params))
  items:=make([]*widget.FormItem,0,len(r.Params))
  var update func()
@@ -215,14 +215,14 @@ func (u *desktopUI) commandDetail(r recipe) {
   case len(p.UI.Options)>0:
    sel:=widget.NewSelect(p.UI.Options,func(string){changed()})
    sel.SetSelected(initial)
-   obj=sel;field=formField{func()string{return sel.Selected},func(){sel.ClearSelected();sel.SetSelected(initial)}}
+   obj=sel;field=formField{func()string{return sel.Selected}}
   case p.UI.Type=="checkbox"||p.Flag:
    check:=widget.NewCheck("",func(bool){changed()});check.SetChecked(initial=="true")
-   obj=check;field=formField{func()string{if check.Checked{return "true"};return "false"},func(){check.SetChecked(initial=="true")}}
+   obj=check;field=formField{func()string{if check.Checked{return "true"};return "false"}}
   default:
    e:=widget.NewEntry();if p.UI.Type=="password"{e=widget.NewPasswordEntry()}
    e.SetPlaceHolder(p.hint());e.SetText(initial);e.OnChanged=func(string){changed()}
-   obj=e;field=formField{func()string{return e.Text},func(){e.SetText(initial)}}
+   obj=e;field=formField{func()string{return e.Text}}
   }
   if p.UI.Description!=""{note:=widget.NewLabel(p.UI.Description);note.Wrapping=fyne.TextWrapWord;obj=container.NewVBox(obj,note)}
   fields=append(fields,field);items=append(items,widget.NewFormItem(p.label(),obj))
@@ -244,9 +244,36 @@ func (u *desktopUI) commandDetail(r recipe) {
  )
  content:=container.NewVBox(heading(r.Group+" / "+r.title()),widget.NewSeparator(),details,widget.NewSeparator())
  if reason:=risk(r.Name);reason!=""{warning:=widget.NewLabel("Warning: "+reason);warning.Wrapping=fyne.TextWrapWord;content.Add(warning)}
- run:=widget.NewButtonWithIcon("Run",theme.MediaPlayIcon(),func(){if u.guard(){a,err:=args();if err!=nil{dialog.ShowError(err,u.win);return};if r.Confirm&&risk(r.Name)==""{dialog.ShowConfirm("Confirm recipe","Run "+r.title()+"?",func(ok bool){if ok{u.confirmRun([][]string{a},nil)}},u.win)}else{u.confirmRun([][]string{a},nil)}}})
+ // Keep progress and result immediately beside Run, even for fast recipes.
+ progress:=widget.NewProgressBarInfinite()
+ progress.Hide()
+ result:=widget.NewLabel("")
+ result.Hide()
+ var run *widget.Button
+ started:=func(){
+  result.Hide()
+  progress.Show()
+  progress.Start()
+  run.Disable()
+ }
+ finished:=func(err error){
+  progress.Stop()
+  progress.Hide()
+  run.Enable()
+  if err!=nil {result.SetText("Failed: "+err.Error())} else {result.SetText("✓ OK — Completed")}
+  result.Show()
+ }
+ run=widget.NewButtonWithIcon("Run",theme.MediaPlayIcon(),func(){
+  if !u.guard(){return}
+  a,err:=args()
+  if err!=nil{dialog.ShowError(err,u.win);return}
+  execute:=func(){u.confirmRun([][]string{a},started,finished)}
+  if r.Confirm&&risk(r.Name)==""{
+   dialog.ShowConfirm("Confirm recipe","Run "+r.title()+"?",func(ok bool){if ok{execute()}},u.win)
+  }else{execute()}
+ })
  run.Importance=widget.HighImportance
- content.Add(container.NewHBox(run,widget.NewButton("Reset parameters",func(){for _,f:=range fields{f.reset()};update()})))
+ content.Add(container.NewHBox(run,progress,result))
  u.show(container.NewVScroll(container.NewPadded(content)))
 }
 
