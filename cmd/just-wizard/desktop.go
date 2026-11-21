@@ -245,7 +245,7 @@ func (u *desktopUI) commandDetail(r recipe) {
  content:=container.NewVBox(heading(r.Group+" / "+r.title()),widget.NewSeparator(),details,widget.NewSeparator())
  if reason:=risk(r.Name);reason!=""{warning:=widget.NewLabel("Warning: "+reason);warning.Wrapping=fyne.TextWrapWord;content.Add(warning)}
  // Keep progress and result immediately beside Run, even for fast recipes.
- progress:=widget.NewProgressBarInfinite()
+ progress:=widget.NewActivity()
  progress.Hide()
  result:=widget.NewLabel("")
  result.Hide()
@@ -273,7 +273,7 @@ func (u *desktopUI) commandDetail(r recipe) {
   }else{execute()}
  })
  run.Importance=widget.HighImportance
- content.Add(container.NewHBox(run,progress,result))
+ content.Add(container.NewHBox(run,container.NewCenter(progress),result))
  u.show(container.NewVScroll(container.NewPadded(content)))
 }
 
